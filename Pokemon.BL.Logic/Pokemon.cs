@@ -11,6 +11,7 @@ namespace Pokemon.BL.Logic
         public int DexNum { get; set; }
         public string Name { get; set; }
         public int CategoryId { get; set; }
+        public string Category { get; set; }
         public int Height { get; set; }
         public int Weight { get; set; }
         public ICollection<PokemonTypes> PokemonTypes { get; set; } = new List<PokemonTypes>();

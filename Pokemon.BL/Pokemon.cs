@@ -23,7 +23,8 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "SELECT Id, Name, CategoryId, Height, Weight FROM Pokemon";
+                    string query = "SELECT Id, p.Name, c.Name as Category, Height, Weight " +
+                        "FROM Pokemon p join Categories c on p.CategoryId=c.Id";
                     SqlCommand cmd = new SqlCommand(query, conn);
 
                     conn.Open();
@@ -35,7 +36,7 @@ namespace Pokemon.BL
                         {
                             DexNum = (int)reader["DexNum"],
                             Name = reader["Name"].ToString(),
-                            CategoryId = (int)reader["CategoryID"],
+                            Category = reader["Category"].ToString(),
                             Height = (int)reader["Height"], 
                             Weight = (int)reader["Weight"]
                         });
@@ -58,7 +59,9 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "SELECT Id, Name, CategoryId, Height, Weight FROM Pokemon WHERE Id = @Id";
+                    string query = "SELECT DexNum, p.Name, c.Name as Category, Height, Weight " +
+                        "FROM Pokemon p Join Categories c on p.CategoryId=c.Id" +
+                        "WHERE Id = @Id";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@Id", id);
 
@@ -70,7 +73,7 @@ namespace Pokemon.BL
                         {
                             DexNum = (int)reader["Id"],
                             Name = reader["Name"].ToString(),
-                            CategoryId = (int)reader["CategoryID"],
+                            Category = reader["Category"].ToString(),
                             Height = (int)reader["Height"],
                             Weight = (int)reader["Weight"]
                         };
@@ -94,7 +97,7 @@ namespace Pokemon.BL
                     string query = "INSERT INTO Pokemon (DexNum, Name, CategoryId, Height, Weight) VALUES" +
                         " (@DexNum, @Name, @CategoryId, @Height, @Weight)";
                     SqlCommand cmd = new SqlCommand(query, conn);
-                    cmd.Parameters.AddWithValue("@NDexNum", pokemon.Name);
+                    cmd.Parameters.AddWithValue("@DexNum", pokemon.DexNum);
                     cmd.Parameters.AddWithValue("@Name", pokemon.Name);
                     cmd.Parameters.AddWithValue("@CategoryId", pokemon.CategoryId);
                     cmd.Parameters.AddWithValue("@Height", pokemon.Height);
