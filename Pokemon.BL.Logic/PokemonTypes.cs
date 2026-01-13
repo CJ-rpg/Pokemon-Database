@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace Pokemon.BL.Logic
 {
-    public class PokemonTypes
+    internal class PokemonTypes
     {
         public int Id { get; set; }
         public int DexNum { get; set; }
-        public Pokemon Pokemon { get; set; }
         public int TypeId { get; set; }
-        public Type Type { get; set; }
     }
 }

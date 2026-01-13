@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,7 @@ namespace Pokemon.BL
     public class Pokemon
     {
         private readonly string _connectionString;
+        private bool allowDeleteAll = false;
 
         public Pokemon(string connectionString)
         {
@@ -59,9 +61,14 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "SELECT DexNum, p.Name, c.Name as Category, Height, Weight " +
-                        "FROM Pokemon p Join Categories c on p.CategoryId=c.Id" +
-                        "WHERE Id = @Id";
+                    string query = "SELECT p.DexNum, p.Name, c.Name AS Category, p.Height, p.Weight, " +
+                        "t.Id AS TypeId, t.Name AS TypeName a.Name AS AbilityName" +
+                        "FROM Pokemon p JOIN Categories c ON p.CategoryId = c.Id " +
+                        "LEFT JOIN PokemonTypes pt ON p.DexNum = pt.DexNum " +
+                        "LEFT JOIN Types t ON pt.TypeId = t.Id " +
+                        "LEFT JOIN PossibleAbilities pa ON p.DexNum = pa.DexNum " +
+                        "LEFT JOIN Abilities a ON pa.AbilityId = a.Id " +
+                        "WHERE p.DexNum = @DexNum";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@Id", id);
 
@@ -69,14 +76,25 @@ namespace Pokemon.BL
                     SqlDataReader reader = cmd.ExecuteReader();
                     if (reader.Read())
                     {
-                        pokemon = new BL.Logic.Pokemon
+                        if (pokemon == null)
                         {
-                            DexNum = (int)reader["Id"],
-                            Name = reader["Name"].ToString(),
-                            Category = reader["Category"].ToString(),
-                            Height = (int)reader["Height"],
-                            Weight = (int)reader["Weight"]
-                        };
+                            pokemon = new BL.Logic.Pokemon
+                            {
+                                DexNum = (int)reader["DexNum"],
+                                Name = reader["Name"].ToString(),
+                                Category = reader["Category"].ToString(),
+                                Height = (int)reader["Height"],
+                                Weight = (int)reader["Weight"]
+                            };
+                        }
+                        if (reader["TypeId"] != DBNull.Value)
+                        {
+                            pokemon.Types.Add(new BL.Logic.Type
+                            {
+                                Id = (int)reader["TypeId"],
+                                Name = reader["TypeName"].ToString()
+                            });
+                        }
                     }
                 }
 
@@ -121,11 +139,11 @@ namespace Pokemon.BL
                 {
                     string query = "UPDATE Pokemon SET Name = @Name, CategoryId = @CategoryId, Height = @Height, Weight = @Weight WHERE DexNum = @DexNum";
                     SqlCommand cmd = new SqlCommand(query, conn);
-                    cmd.Parameters.AddWithValue("@DexNum", pokemon.DexNum);
-                    cmd.Parameters.AddWithValue("@Name", pokemon.Name);
-                    cmd.Parameters.AddWithValue("@CategoryId", pokemon.CategoryId);
-                    cmd.Parameters.AddWithValue("@Height", pokemon.Height);
-                    cmd.Parameters.AddWithValue("@Weight", pokemon.Weight);
+                    cmd.Parameters.Add("@DexNum", SqlDbType.Int).Value = pokemon.DexNum;
+                    cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = pokemon.Name;
+                    cmd.Parameters.Add("@CategoryId", SqlDbType.Int).Value = pokemon.CategoryId;
+                    cmd.Parameters.Add("@Height", SqlDbType.Int).Value = pokemon.Height;
+                    cmd.Parameters.Add("@Weight", SqlDbType.Int).Value = pokemon.Weight;
                     Console.WriteLine(cmd);
                     conn.Open();
                     cmd.ExecuteNonQuery();
@@ -134,6 +152,82 @@ namespace Pokemon.BL
             catch (Exception ex)
             {
                 throw new Exception("Error Updating Pokemon in database.", ex);
+            }
+        }
+
+        public void AddTypeToPokemon(int dexNum, int typeId)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_connectionString))
+                {
+                    var cmd = new SqlCommand(
+                        "INSERT INTO PokemonTypes (DexNum, TypeId) VALUES (@DexNum, @TypeId)",
+                        conn
+                    );
+
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                    cmd.Parameters.AddWithValue("@TypeId", typeId);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error Adding Type to Pokemon in database.", ex);
+            }
+        }
+
+        public void RemoveTypeFromPokemon(int dexNum, int typeId)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                var cmd = new SqlCommand(
+                "DELETE FROM PokemonTypes WHERE DexNum = @DexNum AND TypeId = @TypeId",
+                conn
+                );
+                cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                cmd.Parameters.AddWithValue("@TypeId", typeId);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void AddAbilityToPokemon(int dexNum, int abilityId)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_connectionString))
+                {
+                    var cmd = new SqlCommand(
+                        "INSERT INTO PossibleAbilities (DexNum, AbilityId) VALUES (@DexNum, @AbilityId)",
+                        conn
+                    );
+
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                    cmd.Parameters.AddWithValue("@AbilityId", abilityId);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error Adding Ability to Pokemon in database.", ex);
+            }
+        }
+
+        public void RemoveAbilityFromPokemon(int dexNum, int abilityId)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                var cmd = new SqlCommand(
+                "DELETE FROM PossibleAbilities WHERE DexNum = @DexNum AND AbilityId = @AbilityId",
+                conn
+                );
+                cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                cmd.Parameters.AddWithValue("@AbilityId", abilityId);
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
         }
 
@@ -148,7 +242,11 @@ namespace Pokemon.BL
                     cmd.Parameters.AddWithValue("@DexNum", id);
                     Console.WriteLine(cmd);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    int rows = cmd.ExecuteNonQuery();
+                    if (rows == 0)
+                    {
+                        throw new Exception("No Pokemon was updated.");
+                    }
                 }
             }
             catch (Exception ex)
@@ -159,6 +257,8 @@ namespace Pokemon.BL
 
         public void DeleteAll()
         {
+            if (!allowDeleteAll)
+                throw new InvalidOperationException("DeleteAll is disabled.");
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
@@ -167,7 +267,11 @@ namespace Pokemon.BL
                     SqlCommand cmd = new SqlCommand(query, conn);
                     Console.WriteLine(cmd);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    int rows = cmd.ExecuteNonQuery();
+                    if (rows == 0)
+                    {
+                        throw new Exception("No Pokemon was updated.");
+                    }
                 }
             }
             catch (Exception ex)

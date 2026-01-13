@@ -14,6 +14,7 @@ namespace Pokemon.BL.Logic
         public string Category { get; set; }
         public int Height { get; set; }
         public int Weight { get; set; }
-        public ICollection<PokemonTypes> PokemonTypes { get; set; } = new List<PokemonTypes>();
+
+        public List<Type> Types { get; set; } = new List<Type>();
     }
 }

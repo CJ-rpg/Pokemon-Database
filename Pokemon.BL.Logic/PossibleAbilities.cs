@@ -10,9 +10,7 @@ namespace Pokemon.BL.Logic
     {
         public int Id { get; set; }
         public int DexNum { get; set; }
-        public Pokemon Pokemon { get; set; }
         public int AbilityId { get; set; }
-        public Ability Abilities { get; set; }
         public bool Hidden { get; set; }
     }
 }
