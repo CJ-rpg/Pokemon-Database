@@ -62,7 +62,7 @@ namespace Pokemon.BL
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     string query = "SELECT p.DexNum, p.Name, c.Name AS Category, p.Height, p.Weight, " +
-                        "t.Id AS TypeId, t.Name AS TypeName a.Name AS AbilityName" +
+                        "t.Id AS TypeId, t.Name AS TypeName, a.Name AS AbilityName, Hidden" +
                         "FROM Pokemon p JOIN Categories c ON p.CategoryId = c.Id " +
                         "LEFT JOIN PokemonTypes pt ON p.DexNum = pt.DexNum " +
                         "LEFT JOIN Types t ON pt.TypeId = t.Id " +
@@ -74,7 +74,7 @@ namespace Pokemon.BL
 
                     conn.Open();
                     SqlDataReader reader = cmd.ExecuteReader();
-                    if (reader.Read())
+                    while (reader.Read())
                     {
                         if (pokemon == null)
                         {
@@ -87,13 +87,30 @@ namespace Pokemon.BL
                                 Weight = (int)reader["Weight"]
                             };
                         }
+
                         if (reader["TypeId"] != DBNull.Value)
                         {
-                            pokemon.Types.Add(new BL.Logic.Type
+                            var typeId = (int)reader["TypeId"];
+                            if (!pokemon.Types.Any(t => t.Id == typeId))
                             {
-                                Id = (int)reader["TypeId"],
-                                Name = reader["TypeName"].ToString()
-                            });
+                                pokemon.Types.Add(new BL.Logic.Type
+                                {
+                                    Id = typeId,
+                                    Name = reader["TypeName"].ToString()
+                                });
+                            }
+                        }
+
+                        if (reader["AbilityName"] != DBNull.Value)
+                        {
+                            var abilityName = reader["AbilityName"].ToString();
+                            if (!pokemon.Abilities.Any(a => a.Name == abilityName))
+                            {
+                                pokemon.Abilities.Add(new BL.Logic.Ability
+                                {
+                                    Name = abilityName,
+                                });
+                            }
                         }
                     }
                 }
@@ -112,8 +129,8 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "INSERT INTO Pokemon (DexNum, Name, CategoryId, Height, Weight) VALUES" +
-                        " (@DexNum, @Name, @CategoryId, @Height, @Weight)";
+                    string query = "INSERT INTO Pokemon (DexNum, Name, CategoryId, Height, Weight) VALUES " +
+                        "(@DexNum, @Name, @CategoryId, @Height, @Weight)";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@DexNum", pokemon.DexNum);
                     cmd.Parameters.AddWithValue("@Name", pokemon.Name);
@@ -137,7 +154,8 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "UPDATE Pokemon SET Name = @Name, CategoryId = @CategoryId, Height = @Height, Weight = @Weight WHERE DexNum = @DexNum";
+                    string query = "UPDATE Pokemon SET Name = @Name, CategoryId = @CategoryId, Height = @Height, Weight = @Weight " +
+                        "WHERE DexNum = @DexNum";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.Add("@DexNum", SqlDbType.Int).Value = pokemon.DexNum;
                     cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = pokemon.Name;
@@ -193,19 +211,20 @@ namespace Pokemon.BL
             }
         }
 
-        public void AddAbilityToPokemon(int dexNum, int abilityId)
+        public void AddAbilityToPokemon(int dexNum, int abilityId, bool hidden)
         {
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     var cmd = new SqlCommand(
-                        "INSERT INTO PossibleAbilities (DexNum, AbilityId) VALUES (@DexNum, @AbilityId)",
+                        "INSERT INTO PossibleAbilities (DexNum, AbilityId, Hidden) VALUES (@DexNum, @AbilityId, @Hidden)",
                         conn
                     );
 
                     cmd.Parameters.AddWithValue("@DexNum", dexNum);
                     cmd.Parameters.AddWithValue("@AbilityId", abilityId);
+                    cmd.Parameters.AddWithValue("@Hidden", hidden);
                     conn.Open();
                     cmd.ExecuteNonQuery();
                 }
@@ -277,6 +296,317 @@ namespace Pokemon.BL
             catch (Exception ex)
             {
                 throw new Exception("Error deleting all Pokemon from database.", ex);
+            }
+        }
+
+        /* ---------- Async ---------- */
+
+        public async Task<List<BL.Logic.Pokemon>> SelectAllAsync()
+        {
+            var pokemon = new List<BL.Logic.Pokemon>();
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "SELECT DexNum, p.Name, c.Name as Category, Height, Weight " +
+                    "FROM Pokemon p join Categories c on p.CategoryId=c.Id", conn))
+                {
+                    await conn.OpenAsync();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            pokemon.Add(new BL.Logic.Pokemon
+                            {
+                                DexNum = (int)reader["DexNum"],
+                                Name = reader["Name"].ToString(),
+                                Category = reader["Category"].ToString(),
+                                Height = (int)reader["Height"],
+                                Weight = (int)reader["Weight"]
+                            });
+                        }
+                    }
+                }
+
+                return pokemon;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error selecting all Pokemon from database.", ex);
+            }
+        }
+
+        public async Task<BL.Logic.Pokemon> SelectAsync(int dexNum)
+        {
+            BL.Logic.Pokemon pokemon = null;
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    @"SELECT p.DexNum, p.Name, c.Name AS Category, p.Height, p.Weight,
+                     t.Id AS TypeId, t.Name AS TypeName,
+                     a.Id AS AbilityId, a.Name AS AbilityName, pa.Hidden
+              FROM Pokemon p
+              JOIN Categories c ON p.CategoryId = c.Id
+              LEFT JOIN PokemonTypes pt ON p.DexNum = pt.DexNum
+              LEFT JOIN Types t ON pt.TypeId = t.Id
+              LEFT JOIN PossibleAbilities pa ON p.DexNum = pa.DexNum
+              LEFT JOIN Abilities a ON pa.AbilityId = a.Id
+              WHERE p.DexNum = @DexNum", conn))
+                {
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+
+                    await conn.OpenAsync();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (pokemon == null)
+                            {
+                                pokemon = new BL.Logic.Pokemon
+                                {
+                                    DexNum = (int)reader["DexNum"],
+                                    Name = reader["Name"].ToString(),
+                                    Category = reader["Category"].ToString(),
+                                    Height = (int)reader["Height"],
+                                    Weight = (int)reader["Weight"],
+                                    Types = new List<BL.Logic.Type>(),
+                                    Abilities = new List<BL.Logic.Ability>()
+                                };
+                            }
+
+                            // Add Type if exists and not already added
+                            if (reader["TypeId"] != DBNull.Value)
+                            {
+                                int typeId = (int)reader["TypeId"];
+                                if (!pokemon.Types.Any(t => t.Id == typeId))
+                                {
+                                    pokemon.Types.Add(new BL.Logic.Type
+                                    {
+                                        Id = typeId,
+                                        Name = reader["TypeName"].ToString()
+                                    });
+                                }
+                            }
+
+                            // Add Ability if exists and not already added
+                            if (reader["AbilityId"] != DBNull.Value)
+                            {
+                                int abilityId = (int)reader["AbilityId"];
+                                if (!pokemon.Abilities.Any(a => a.Id == abilityId))
+                                {
+                                    pokemon.Abilities.Add(new BL.Logic.Ability
+                                    {
+                                        Id = abilityId,
+                                        Name = reader["AbilityName"].ToString(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return pokemon;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error selecting Pokemon from database.", ex);
+            }
+        }
+
+        public async Task InsertAsync(BL.Logic.Pokemon pokemon)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "INSERT INTO Pokemon (DexNum, Name, CategoryId, Height, Weight) VALUES " +
+                        "(@DexNum, @Name, @CategoryId, @Height, @Weight)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@DexNum", pokemon.DexNum);
+                    cmd.Parameters.AddWithValue("@Name", pokemon.Name);
+                    cmd.Parameters.AddWithValue("@CategoryId", pokemon.CategoryId);
+                    cmd.Parameters.AddWithValue("@Height", pokemon.Height);
+                    cmd.Parameters.AddWithValue("@Weight", pokemon.Weight);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error inserting Pokemon into database.", ex);
+            }
+        }
+
+        public async Task UpdateAsync(BL.Logic.Pokemon pokemon)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "UPDATE Pokemon SET Name = @Name, CategoryId = @CategoryId, Height = @Height, Weight = @Weight " +
+                        "WHERE DexNum = @DexNum",
+                    conn))
+                {
+
+                    cmd.Parameters.Add("@DexNum", SqlDbType.Int).Value = pokemon.DexNum;
+                    cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = pokemon.Name;
+                    cmd.Parameters.Add("@CategoryId", SqlDbType.Int).Value = pokemon.CategoryId;
+                    cmd.Parameters.Add("@Height", SqlDbType.Int).Value = pokemon.Height;
+                    cmd.Parameters.Add("@Weight", SqlDbType.Int).Value = pokemon.Weight;
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error updating Pokemon in database.", ex);
+            }
+        }
+
+        public async Task AddTypeToPokemonAsync(int dexNum, int typeId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "INSERT INTO PokemonTypes (DexNum, TypeId) VALUES (@DexNum, @TypeId)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                    cmd.Parameters.AddWithValue("@TypeId", typeId);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error adding Type to Pokemon in database.", ex);
+            }
+        }
+
+        public async Task RemoveTypeFromPokemonAsync(int dexNum, int typeId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "DELETE FROM PokemonTypes WHERE DexNum = @DexNum AND TypeId = @TypeId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                    cmd.Parameters.AddWithValue("@TypeId", typeId);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error removing Type from Pokemon in database.", ex);
+            }
+        }
+
+        public async Task AddAbilityToPokemonAsync(int dexNum, int abilityId, bool hidden)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "INSERT INTO PossibleAbilities (DexNum, AbilityId, Hidden) VALUES (@DexNum, @AbilityId, @Hidden)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                    cmd.Parameters.AddWithValue("@AbilityId", abilityId);
+                    cmd.Parameters.AddWithValue("@Hidden", hidden);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error adding Ability to Pokemon in database.", ex);
+            }
+        }
+
+        public async Task RemoveAbilityFromPokemonAsync(int dexNum, int abilityId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "DELETE FROM PossibleAbilities WHERE DexNum = @DexNum AND AbilityId = @AbilityId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@DexNum", dexNum);
+                    cmd.Parameters.AddWithValue("@AbilityId", abilityId);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error removing Ability from Pokemon in database.", ex);
+            }
+        }
+
+        
+
+        public async Task DeleteAsync(int id)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "DELETE FROM Pokemon WHERE DexNum = @DexNum",
+                    conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@DexNum", id);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error deleting Pokemon from database.", ex);
+            }
+        }
+
+        public async Task DeleteAllAsync()
+        {
+            if (!allowDeleteAll)
+                throw new InvalidOperationException("DeleteAll is disabled.");
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                        "DELETE FROM Pokemon",
+                        conn))
+                {
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error deleting all Pokemon from database.", ex);
             }
         }
     }

@@ -16,5 +16,6 @@ namespace Pokemon.BL.Logic
         public int Weight { get; set; }
 
         public List<Type> Types { get; set; } = new List<Type>();
+        public List<Ability> Abilities { get; set; } = new List<Ability>();
     }
 }

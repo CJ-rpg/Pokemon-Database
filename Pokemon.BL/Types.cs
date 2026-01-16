@@ -129,7 +129,11 @@ namespace Pokemon.BL
                     cmd.Parameters.AddWithValue("@Id", id);
                     Console.WriteLine(cmd);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    int rows = cmd.ExecuteNonQuery();
+                    if (rows == 0)
+                    {
+                        throw new Exception("No Type was updated.");
+                    }
                 }
             }
             catch (Exception ex)
@@ -147,12 +151,175 @@ namespace Pokemon.BL
                     SqlCommand cmd = new SqlCommand(query, conn);
                     Console.WriteLine(cmd);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    int rows = cmd.ExecuteNonQuery();
+                    if (rows == 0)
+                    {
+                        throw new Exception("No Type was updated.");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception("Error deleting all Types from database.", ex);
+            }
+        }
+
+        /* ---------- Async ---------- */
+
+        public async Task<List<Type>> SelectAllAsync()
+        {
+            var types = new List<Type>();
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "SELECT Id, Name FROM Types", conn))
+                {
+                    await conn.OpenAsync();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            types.Add(new Type
+                            {
+                                Id = (int)reader["Id"],
+                                Name = reader["Name"].ToString()
+                            });
+                        }
+                    }
+                }
+
+                return types;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error selecting all Types from database.", ex);
+            }
+        }
+
+        public async Task<Type> SelectAsync(int id)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                        "SELECT Id, Name FROM Types WHERE Id = @Id",
+                        conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    await conn.OpenAsync();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new Type
+                            {
+                                Id = (int)reader["Id"],
+                                Name = reader["Name"].ToString()
+                            };
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error selecting Type from database.", ex);
+            }
+        }
+
+        public async Task InsertAsync(Type type)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "INSERT INTO Types (Name) VALUES (@Name)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@Name", type.Name);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error inserting Type into database.", ex);
+            }
+        }
+
+        public async Task UpdateAsync(Type type)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "UPDATE Types SET Name = @Name WHERE Id = @Id",
+                    conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@Id", type.Id);
+                    cmd.Parameters.AddWithValue("@Name", type.Name);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error updating Type in database.", ex);
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "DELETE FROM Types WHERE Id = @Id",
+                    conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error deleting Type from database.", ex);
+            }
+        }
+
+        public async Task DeleteAllAsync()
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                        "DELETE FROM Types",
+                        conn))
+                {
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error deleting all Types from database.", ex);
             }
         }
     }

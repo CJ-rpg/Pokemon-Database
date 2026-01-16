@@ -23,7 +23,7 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "SELECT Id, Name FROM abilities";
+                    string query = "SELECT Id, Name, Description FROM abilities";
                     SqlCommand cmd = new SqlCommand(query, conn);
 
                     conn.Open();
@@ -56,7 +56,7 @@ namespace Pokemon.BL
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
-                    string query = "SELECT Id, Name FROM abilities WHERE Id = @Id";
+                    string query = "SELECT Id, Name, Description FROM abilities WHERE Id = @Id";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@Id", id);
 
@@ -135,7 +135,11 @@ namespace Pokemon.BL
                     cmd.Parameters.AddWithValue("@Id", id);
                     Console.WriteLine(cmd);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    int rows = cmd.ExecuteNonQuery();
+                    if (rows == 0)
+                    {
+                        throw new Exception("No Ability was updated.");
+                    }
                 }
             }
             catch (Exception ex)
@@ -154,12 +158,179 @@ namespace Pokemon.BL
                     SqlCommand cmd = new SqlCommand(query, conn);
                     Console.WriteLine(cmd);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    int rows = cmd.ExecuteNonQuery();
+                    if (rows == 0)
+                    {
+                        throw new Exception("No Ability was updated.");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception("Error deleting all abilities from database.", ex);
+            }
+        }
+
+        /* ---------- Async ---------- */
+
+        public async Task<List<Ability>> SelectAllAsync()
+        {
+            var abilities = new List<Ability>();
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "SELECT Id, Name, Description FROM Abilities", conn))
+                {
+                    await conn.OpenAsync();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            abilities.Add(new Ability
+                            {
+                                Id = (int)reader["Id"],
+                                Name = reader["Name"].ToString(),
+                                Description = reader["Description"].ToString(),
+                            });
+                        }
+                    }
+                }
+
+                return abilities;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error selecting all Abilities from database.", ex);
+            }
+        }
+
+        public async Task<Ability> SelectAsync(int id)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                        "SELECT Id, Name, Description FROM Abilities WHERE Id = @Id",
+                        conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    await conn.OpenAsync();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new Ability
+                            {
+                                Id = (int)reader["Id"],
+                                Name = reader["Name"].ToString(),
+                                Description = reader["Description"].ToString()
+                            };
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error selecting Ability from database.", ex);
+            }
+        }
+
+        public async Task InsertAsync(Ability ability)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "INSERT INTO Abilities (Name, Description) VALUES (@Name, @Description)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@Name", ability.Name);
+                    cmd.Parameters.AddWithValue("@Description", ability.Description);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error inserting Ability into database.", ex);
+            }
+        }
+
+        public async Task UpdateAsync(Ability ability)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "UPDATE Abilities SET Name = @Name Description = @Description WHERE Id = @Id",
+                    conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@Id", ability.Id);
+                    cmd.Parameters.AddWithValue("@Name", ability.Name);
+                    cmd.Parameters.AddWithValue("@Description", ability.Description);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error updating Ability in database.", ex);
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "DELETE FROM Abilities WHERE Id = @Id",
+                    conn))
+                {
+
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error deleting Ability from database.", ex);
+            }
+        }
+
+        public async Task DeleteAllAsync()
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                        "DELETE FROM Abilities",
+                        conn))
+                {
+                    await conn.OpenAsync();
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(
+                    "Error deleting all Abilities from database.", ex);
             }
         }
     }

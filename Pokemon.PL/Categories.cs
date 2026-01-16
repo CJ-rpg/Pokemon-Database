@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,36 +19,138 @@ namespace Pokemon.PL
             categories = new BL.Categories(connectionString);
         }
 
-        public List<Category> GetAll()
+        public List<Category> Select()
         {
-            return categories.SelectAll();
+            try
+            {
+                return categories.SelectAll();
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load categories.", ex);
+            }
         }
 
-        public Category Get(int id)
+        public Category Select(int id)
         {
-            return categories.Select(id);
+            try
+            {
+                return categories.Select(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load category.", ex);
+            }
         }
 
-        public void Add(int id, string name)
+        public void Insert(Category category)
         {
-            Category type = new Category { Id = id, Name = name };
-            categories.Insert(type);
+            if (category == null)
+                throw new ArgumentNullException(nameof(category));
+
+            try
+            {
+                categories.Insert(category);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to add category.", ex);
+            }
         }
 
-        public void Edit(string name)
+        public void Update(Category category)
         {
-            Category type = new Category { Name = name };
-            categories.Update(type);
+            if (category == null)
+                throw new ArgumentNullException(nameof(category));
+
+            try
+            {
+                categories.Update(category);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to update category.", ex);
+            }
         }
 
-        public void Remove(int id)
+        public void Delete(int id)
         {
-            categories.Delete(id);
+            try
+            {
+                categories.Delete(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to delete category.", ex);
+            }
         }
 
-        public void RemoveAll()
+        /* ---------- Async ---------- */
+
+        public async Task<List<Category>> SelectAsync()
         {
-            categories.DeleteAll();
+            try
+            {
+                return await categories.SelectAllAsync();
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load categories.", ex);
+            }
+        }
+
+        public async Task<Category> SelectAsync(int id)
+        {
+            try
+            {
+                return await categories.SelectAsync(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load category.", ex);
+            }
+        }
+
+        public async Task InsertAsync(Category category)
+        {
+            if (category == null)
+                throw new ArgumentNullException(nameof(category));
+
+            try
+            {
+                await categories.InsertAsync(category);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to add category.", ex);
+            }
+        }
+
+        public async Task UpdateAsync(Category category)
+        {
+            if (category == null)
+                throw new ArgumentNullException(nameof(category));
+
+            try
+            {
+                await categories.UpdateAsync(category);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to update category.", ex);
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            try
+            {
+                await categories.DeleteAsync(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to delete category.", ex);
+            }
         }
     }
 }
