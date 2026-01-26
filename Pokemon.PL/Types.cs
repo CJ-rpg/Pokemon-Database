@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,43 +11,145 @@ namespace Pokemon.PL
 {
     public class TypesPL
     {
-        private readonly Types types;
+        private readonly BL.Types types;
 
         public TypesPL(string connectionString)
         {
             types = new BL.Types(connectionString);
         }
 
-        public List<BL.Logic.Type> GetAll()
+        public List<BL.Logic.Type> Select()
         {
-            return types.SelectAll();
+            try
+            {
+                return types.SelectAll();
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load types.", ex);
+            }
         }
 
-        public BL.Logic.Type Get(int id)
+        public BL.Logic.Type Select(int id)
         {
-            return types.Select(id);
+            try
+            {
+                return types.Select(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load Types.", ex);
+            }
         }
 
-        public void Add(int id, string name)
+        public void Insert(BL.Logic.Type type)
         {
-            BL.Logic.Type type = new BL.Logic.Type { Id = id, Name = name };
-            types.Insert(type);
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            try
+            {
+                types.Insert(type);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to add type.", ex);
+            }
         }
 
-        public void Edit(string name)
+        public void Update(BL.Logic.Type type)
         {
-            BL.Logic.Type type = new BL.Logic.Type { Name = name };
-            types.Update(type);
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            try
+            {
+                types.Update(type);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to update type.", ex);
+            }
         }
 
-        public void Remove(int id)
+        public void Delete(int id)
         {
-            types.Delete(id);
+            try
+            {
+                types.Delete(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to delete type.", ex);
+            }
         }
 
-        public void RemoveAll()
+        /* ---------- Async ---------- */
+
+        public async Task<List<BL.Logic.Type>> SelectAsync()
         {
-            types.DeleteAll();
+            try
+            {
+                return await types.SelectAllAsync();
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load types.", ex);
+            }
+        }
+
+        public async Task<BL.Logic.Type> SelectAsync(int id)
+        {
+            try
+            {
+                return await types.SelectAsync(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to load type.", ex);
+            }
+        }
+
+        public async Task InsertAsync(BL.Logic.Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            try
+            {
+                await types.InsertAsync(type);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to add type.", ex);
+            }
+        }
+
+        public async Task UpdateAsync(BL.Logic.Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            try
+            {
+                await types.UpdateAsync(type);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to update type.", ex);
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            try
+            {
+                await types.DeleteAsync(id);
+            }
+            catch (DbException ex)
+            {
+                throw new ApplicationException("Unable to delete type.", ex);
+            }
         }
     }
 }
