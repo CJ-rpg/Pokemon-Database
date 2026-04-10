@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,7 +38,7 @@ namespace Pokemon.BL
                         {
                             DexNum = (int)reader["DexNum"],
                             Name = reader["Name"].ToString(),
-                            Category = reader["Category"].ToString(),
+                            CategoryName = reader["Category"].ToString(),
                             Height = (int)reader["Height"], 
                             Weight = (int)reader["Weight"]
                         });
@@ -62,7 +62,7 @@ namespace Pokemon.BL
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     string query = "SELECT p.DexNum, p.Name, c.Name AS Category, p.Height, p.Weight, " +
-                        "t.Id AS TypeId, t.Name AS TypeName, a.Name AS AbilityName, Hidden" +
+                        "t.Id AS TypeId, t.Name AS TypeName, a.Name AS AbilityName, Hidden " +
                         "FROM Pokemon p JOIN Categories c ON p.CategoryId = c.Id " +
                         "LEFT JOIN PokemonTypes pt ON p.DexNum = pt.DexNum " +
                         "LEFT JOIN Types t ON pt.TypeId = t.Id " +
@@ -82,7 +82,7 @@ namespace Pokemon.BL
                             {
                                 DexNum = (int)reader["DexNum"],
                                 Name = reader["Name"].ToString(),
-                                Category = reader["Category"].ToString(),
+                                CategoryName = reader["Category"].ToString(),
                                 Height = (int)reader["Height"],
                                 Weight = (int)reader["Weight"]
                             };
@@ -322,7 +322,7 @@ namespace Pokemon.BL
                             {
                                 DexNum = (int)reader["DexNum"],
                                 Name = reader["Name"].ToString(),
-                                Category = reader["Category"].ToString(),
+                                CategoryName = reader["Category"].ToString(),
                                 Height = (int)reader["Height"],
                                 Weight = (int)reader["Weight"]
                             });
@@ -349,7 +349,7 @@ namespace Pokemon.BL
                 using (var cmd = new SqlCommand(
                     @"SELECT p.DexNum, p.Name, c.Name AS Category, p.Height, p.Weight,
                      t.Id AS TypeId, t.Name AS TypeName,
-                     a.Id AS AbilityId, a.Name AS AbilityName, pa.Hidden
+                     a.Id AS AbilityId, a.Name AS AbilityName, pa.Hidden 
               FROM Pokemon p
               JOIN Categories c ON p.CategoryId = c.Id
               LEFT JOIN PokemonTypes pt ON p.DexNum = pt.DexNum
@@ -372,7 +372,7 @@ namespace Pokemon.BL
                                 {
                                     DexNum = (int)reader["DexNum"],
                                     Name = reader["Name"].ToString(),
-                                    Category = reader["Category"].ToString(),
+                                    CategoryName = reader["Category"].ToString(),
                                     Height = (int)reader["Height"],
                                     Weight = (int)reader["Weight"],
                                     Types = new List<BL.Logic.Type>(),
