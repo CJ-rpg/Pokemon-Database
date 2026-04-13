@@ -10,5 +10,7 @@ namespace Pokemon.BL.Logic
     {
         public int Id { get; set; }
         public string Name { get; set; }
+
+        public ICollection<PokemonTypes> PokemonTypes { get; set; }
     }
 }

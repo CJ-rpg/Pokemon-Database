@@ -12,7 +12,7 @@ namespace Pokemon.BL.Logic
     {
         [Key]
         public int DexNum { get; set; }
-
+        
         public string Name { get; set; }
         public int CategoryId { get; set; }
         public Category Category { get; set; }
@@ -26,7 +26,8 @@ namespace Pokemon.BL.Logic
         [Column("Weight(kg)")]
         public decimal Weight { get; set; }
 
-        public List<Type> Types { get; set; } = new List<Type>();
-        public List<Ability> Abilities { get; set; } = new List<Ability>();
+        public ICollection<PokemonTypes> PokemonTypes { get; set; }
+
+        public ICollection<PossibleAbilities> PossibleAbilities { get; set; }
     }
 }

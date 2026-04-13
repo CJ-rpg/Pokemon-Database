@@ -16,7 +16,7 @@ namespace Pokemon.PL
         {
             abilities = new BL.Abilities(connectionString);
         }
-
+         
         public List<Ability> Select()
         {
             try

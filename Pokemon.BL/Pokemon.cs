@@ -91,24 +91,38 @@ namespace Pokemon.BL
                         if (reader["TypeId"] != DBNull.Value)
                         {
                             var typeId = (int)reader["TypeId"];
-                            if (!pokemon.Types.Any(t => t.Id == typeId))
+                            if (!pokemon.PokemonTypes.Any(t => t.Id == typeId))
                             {
-                                pokemon.Types.Add(new BL.Logic.Type
+                                pokemon.PokemonTypes.Add(new BL.Logic.PokemonTypes
                                 {
                                     Id = typeId,
-                                    Name = reader["TypeName"].ToString()
+                                    DexNum = pokemon.DexNum,
+                                    Type = new BL.Logic.Type
+                                    {
+                                        Id = typeId,
+                                        Name = reader["TypeName"].ToString()
+                                    }
                                 });
                             }
                         }
 
-                        if (reader["AbilityName"] != DBNull.Value)
+                        if (reader["AbilityId"] != DBNull.Value)
                         {
-                            var abilityName = reader["AbilityName"].ToString();
-                            if (!pokemon.Abilities.Any(a => a.Name == abilityName))
+                            int abilityId = (int)reader["AbilityId"];
+                            bool hidden = reader["Hidden"] != DBNull.Value && (bool)reader["Hidden"];
+
+                            if (!pokemon.PossibleAbilities.Any(pa => pa.AbilityId == abilityId))
                             {
-                                pokemon.Abilities.Add(new BL.Logic.Ability
+                                pokemon.PossibleAbilities.Add(new BL.Logic.PossibleAbilities
                                 {
-                                    Name = abilityName,
+                                    AbilityId = abilityId,
+                                    DexNum = pokemon.DexNum,
+                                    Hidden = hidden,
+                                    Ability = new BL.Logic.Ability
+                                    {
+                                        Id = abilityId,
+                                        Name = reader["AbilityName"].ToString()
+                                    }
                                 });
                             }
                         }
@@ -375,8 +389,8 @@ namespace Pokemon.BL
                                     CategoryName = reader["Category"].ToString(),
                                     Height = (int)reader["Height"],
                                     Weight = (int)reader["Weight"],
-                                    Types = new List<BL.Logic.Type>(),
-                                    Abilities = new List<BL.Logic.Ability>()
+                                    PokemonTypes = new List<BL.Logic.PokemonTypes>(),
+                                    PossibleAbilities = new List<BL.Logic.PossibleAbilities>()
                                 };
                             }
 
@@ -384,12 +398,17 @@ namespace Pokemon.BL
                             if (reader["TypeId"] != DBNull.Value)
                             {
                                 int typeId = (int)reader["TypeId"];
-                                if (!pokemon.Types.Any(t => t.Id == typeId))
+                                if (!pokemon.PokemonTypes.Any(t => t.Id == typeId))
                                 {
-                                    pokemon.Types.Add(new BL.Logic.Type
+                                    pokemon.PokemonTypes.Add(new BL.Logic.PokemonTypes
                                     {
                                         Id = typeId,
-                                        Name = reader["TypeName"].ToString()
+                                        DexNum = pokemon.DexNum,
+                                        Type = new BL.Logic.Type
+                                        {
+                                            Id = typeId,
+                                            Name = reader["TypeName"].ToString()
+                                        }
                                     });
                                 }
                             }
@@ -398,12 +417,20 @@ namespace Pokemon.BL
                             if (reader["AbilityId"] != DBNull.Value)
                             {
                                 int abilityId = (int)reader["AbilityId"];
-                                if (!pokemon.Abilities.Any(a => a.Id == abilityId))
+                                bool hidden = reader["Hidden"] != DBNull.Value && (bool)reader["Hidden"];
+
+                                if (!pokemon.PossibleAbilities.Any(pa => pa.AbilityId == abilityId))
                                 {
-                                    pokemon.Abilities.Add(new BL.Logic.Ability
+                                    pokemon.PossibleAbilities.Add(new BL.Logic.PossibleAbilities
                                     {
-                                        Id = abilityId,
-                                        Name = reader["AbilityName"].ToString(),
+                                        AbilityId = abilityId,
+                                        DexNum = pokemon.DexNum,
+                                        Hidden = hidden,
+                                        Ability = new BL.Logic.Ability
+                                        {
+                                            Id = abilityId,
+                                            Name = reader["AbilityName"].ToString()
+                                        }
                                     });
                                 }
                             }
